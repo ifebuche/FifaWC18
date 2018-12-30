@@ -1,0 +1,49 @@
+import requests
+from bs4 import BeautifulSoup
+
+#base_url="https://www.fifa.com/worldcup/players/player/"
+#for page in range(200000,202000,200):
+    #print(base_url+str(page))
+r=requests.get("https://www.fifa.com/worldcup/teams/team/43922/")
+c=r.content
+
+soup=BeautifulSoup(c, "html.parser")
+#soup.prettify()
+all=soup.find_all("div", {"class":"fi-p__info"})
+
+#all[0].find("span",{"class":"fi-p__num"}).text
+
+#import csv file of country webpage
+f=pandas.read_csv("TeamAdd.csv")
+
+#Slice the csv into list of coutnries and their FIFA website URLs
+url_list=f.loc[:,"address"]
+country_list=f.loc[:,"country"]
+
+country_list=country_list.tolist() #convert to list. #url_list has already been converted to list. I overwrote it
+
+
+l=[]
+for line in url_list:
+    #print(line, len(line))
+    r=requests.get(line)
+    c=r.content
+    soup=BeautifulSoup(c,"html.parser")
+    all=soup.find_all("div", {"class":"fi-p__info"})
+
+    #Build a dictionary, d, of individual values to be scraped
+    for item in all:
+        d={}
+        d["Player Name"]=item.find("span",{"class":"fi-p__nShorter"}).text
+        try: #try to get a jersery number in case they are not the coach otherwise pass
+            d["Jersey_No"]=item.find("span",{"class":"fi-p__num"}).text
+        except:
+            pass
+        d["Role"]=item.find("div",{"class":"fi-p__info--role"}).text.replace(" ","").replace("\r\n"," ")
+        d["Age"]=item.find("span",{"class":"fi-p__info--ageNum"}).text
+        l.append(d)
+
+#Convert the resulting list to a dataframe, rename the columns and save to a csv file
+df=pandas.DataFrame(l)
+df=df[['Player Name', 'Jersey_No', 'Role', 'Age']]
+df.to_csv("Teams.csv")
